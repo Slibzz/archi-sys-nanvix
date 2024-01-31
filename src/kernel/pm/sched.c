@@ -23,6 +23,13 @@
 #include <nanvix/hal.h>
 #include <nanvix/pm.h>
 #include <signal.h>
+#include <nanvix/klib.h>
+
+PRIVATE inline struct process *default_yield(void);
+PRIVATE inline struct process *round_robin(void);
+PRIVATE inline struct process *random(void);
+PRIVATE inline struct process *lottery(void);
+PRIVATE inline struct process *priority(void);
 
 /**
  * @brief Schedules a process to execution.
@@ -64,7 +71,7 @@ PUBLIC void resume(struct process *proc)
  */
 PUBLIC void yield(void)
 {
-	struct process *p;    /* Working process.     */
+	struct process *p;	  /* Working process.     */
 	struct process *next; /* Next process to run. */
 
 	/* Re-schedule process for execution. */
@@ -85,7 +92,21 @@ PUBLIC void yield(void)
 		if ((p->alarm) && (p->alarm < ticks))
 			p->alarm = 0, sndsig(p, SIGALRM);
 	}
+	next = lottery();
 
+	/* Switch to next process. */
+	next->priority = PRIO_USER;
+	next->state = PROC_RUNNING;
+	next->counter = PROC_QUANTUM;
+	if (curr_proc != next)
+		switch_to(next);
+}
+
+/*Test PASSED*/
+PRIVATE inline struct process *default_yield(void)
+{
+	struct process *p;	  /* Working process.     */
+	struct process *next; /* Next process to run. */
 	/* Choose a process to run next. */
 	next = IDLE;
 	for (p = FIRST_PROC; p <= LAST_PROC; p++)
@@ -93,7 +114,6 @@ PUBLIC void yield(void)
 		/* Skip non-ready process. */
 		if (p->state != PROC_READY)
 			continue;
-
 		/*
 		 * Process with higher
 		 * waiting time found.
@@ -111,11 +131,183 @@ PUBLIC void yield(void)
 		else
 			p->counter++;
 	}
+	return next;
+}
 
-	/* Switch to next process. */
-	next->priority = PRIO_USER;
-	next->state = PROC_RUNNING;
-	next->counter = PROC_QUANTUM;
-	if (curr_proc != next)
-		switch_to(next);
+/*Test PASSED*/
+PRIVATE inline struct process *round_robin(void)
+{
+	struct process *p;	  /* Working process.     */
+	struct process *next; /* Next process to run. */
+	next = IDLE;
+	for (p = curr_proc + 1; p <= LAST_PROC; p++)
+	{
+		if (p->state == PROC_READY)
+		{
+			next = p;
+			break;
+		}
+	}
+	if (next == IDLE)
+	{
+		for (p = FIRST_PROC; p < curr_proc; p++)
+		{
+			if (p->state == PROC_READY)
+			{
+				next = p;
+				break;
+			}
+		}
+	}
+	for (p = FIRST_PROC; p < next; p++)
+	{
+		if (p->state == PROC_READY)
+		{
+			p->counter++;
+		}
+	}
+	for (p = next + 1; p <= LAST_PROC; p++)
+	{
+		if (p->state == PROC_READY)
+		{
+			p->counter++;
+		}
+	}
+	return next;
+}
+
+/*Test PASSED*/
+PRIVATE inline struct process *random(void)
+{
+	struct process *next = IDLE;
+	struct process *p;
+
+	int nprocsReady = 0;
+	for (p = FIRST_PROC; p <= LAST_PROC; p++)
+	{
+		if (p->state == PROC_READY)
+		{
+			p->counter++;
+			nprocsReady++;
+		}
+	}
+
+	if (nprocsReady == 0)
+	{
+		next = IDLE;
+	}
+	else
+	{
+		int random = (krand() % (nprocsReady)) + 1;
+		int i = 0;
+		for (p = FIRST_PROC; p <= LAST_PROC; p++)
+		{
+			if (p->state == PROC_READY)
+			{
+				i++;
+				if (i == random)
+				{
+					next = p;
+					break;
+				}
+			}
+		}
+	}
+
+	return next;
+}
+
+/*
+-100 = 8
+...
+0 = 3
+20 = 2
+40 = 1
+*/
+PRIVATE inline int weight(struct process *p)
+{
+	return (-p->priority + 60) / 20;
+}
+
+/*Test PASSED*/
+PRIVATE inline struct process *lottery(void)
+{
+	struct process *p;	  /* Working process.     */
+	struct process *next; /* Next process to run. */
+	int tickets = 0;
+	for (p = FIRST_PROC; p <= LAST_PROC; p++)
+	{
+		if (p->state == PROC_READY)
+		{
+			tickets += weight(p);
+			p->counter++;
+		}
+	}
+	if (tickets == 0)
+	{
+		next = IDLE;
+	}
+	else
+	{
+		int random = (krand() % tickets) + 1;
+		int i = 0;
+		for (p = FIRST_PROC; p <= LAST_PROC; p++)
+		{
+			if (p->state == PROC_READY)
+			{
+				i += weight(p);
+				if (i >= random)
+				{
+					next = p;
+					break;
+				}
+			}
+		}
+	}
+	return next;
+}
+
+/*Test PASSED*/
+PRIVATE inline struct process *priority(void)
+{
+	struct process *p;	  /* Working process.     */
+	struct process *next; /* Next process to run. */
+	/* Choose a process to run next. */
+	next = IDLE;
+	for (p = FIRST_PROC; p <= LAST_PROC; p++)
+	{
+		/* Skip non-ready process. */
+		if (p->state != PROC_READY)
+			continue;
+
+		/*
+		 * Process with higher
+		 * waiting time found.
+		 */
+		if (p->priority < next->priority)
+		{
+			next->counter++;
+			next = p;
+		}
+		else if (p->priority == next->priority)
+		{
+			if (p->utime + p->ktime <= next->utime + next->ktime)
+			{
+				next->counter++;
+				next = p;
+			}
+			else
+			{
+				p->counter++;
+			}
+		}
+
+		/*
+		 * Increment waiting
+		 * time of process.
+		 */
+		else
+			p->counter++;
+	}
+	return next;
 }
