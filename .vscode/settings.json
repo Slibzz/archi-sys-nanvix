@@ -1,6 +1,14 @@
 {
     "files.associations": {
         "pm.h": "c",
-        "klib.h": "c"
+        "klib.h": "c",
+        "const.h": "c",
+        "sem.h": "c",
+        "config.h": "c",
+        "*.tcc": "c",
+        "functional": "c",
+        "istream": "c",
+        "ranges": "c",
+        "streambuf": "c"
     }
 }

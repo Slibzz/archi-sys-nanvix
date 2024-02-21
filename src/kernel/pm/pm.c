@@ -30,6 +30,7 @@
 #include <sys/stat.h>
 #include <signal.h>
 #include <limits.h>
+#include <nanvix/sem.h>
 
 /**
  * @brief Idle process page directory.
@@ -71,7 +72,7 @@ PUBLIC unsigned nprocs = 0;
  */
 PUBLIC void pm_init(void)
 {
-	int i;             /* Loop index.      */
+	int i;			   /* Loop index.      */
 	struct process *p; /* Working process. */
 
 	/* Initialize the process table. */
@@ -122,6 +123,14 @@ PUBLIC void pm_init(void)
 	IDLE->chain = NULL;
 
 	nprocs++;
+
+	for (int i = 0; i < MAX_SEM; i++)
+	{
+		semaphores[i].valid = 1;
+		semaphores[i].counter = 0;
+		semaphores[i].key = 0;
+		semaphores[i].waiting_processes = NULL;
+	}
 
 	enable_interrupts();
 }
