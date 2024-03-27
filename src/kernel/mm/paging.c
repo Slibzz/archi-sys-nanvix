@@ -322,6 +322,7 @@ retry:
 				continue;
 
 			/* Oldest page found. */
+			// check for older page non accessed 
 			if ((oldest < 0) || (OLDEST(i, oldest)))
 				oldest = i;
 		}
@@ -341,7 +342,6 @@ retry:
 	{
 		pteOldest->accessed = 0;
 		frames[oldest].age = ticks;
-		goto retry;
 	}
 	else
 	{
