@@ -298,22 +298,25 @@ PRIVATE struct
  * @returns Upon success, the number of the frame is returned. Upon failure, a
  *          negative number is returned instead.
  */
+
+int hand =0;
 PRIVATE int allocf(void)
 {
 	int i;		/* Loop index.  */
 	int oldest; /* Oldest page. */
 
 #define OLDEST(x, y) (frames[x].age < frames[y].age)
-
-/* Search for a free frame. */
-	oldest = -1;
-	for (i = 0; i < NR_FRAMES; i++)
+while(1)
+{
+	/* Search for a free frame. */
+	for (hand < NR_FRAMES; hand++)
 	{
 		/* Found it. */
 		if (frames[i].count == 0)
 			goto found;
 
 		/* Local page replacement policy. */
+		/*LRU Clock*/
 		if (frames[i].owner == curr_proc->pid)
 		{
 			/* Skip shared pages. */
@@ -322,36 +325,25 @@ PRIVATE int allocf(void)
 
 			struct pte *pteCurrent;
 			pteCurrent = getpte(curr_proc, frames[i].addr);
-			if (pteCurrent->accessed == 1)
+			if (pteCurrent->accessed == 0)
 			{
-				pteCurrent->accessed = 0;
-				frames[i].age = 0;	
+				goto found;
 			}
 			else
 			{
-				frames[i].age++;
+				pteCurrent->accessed = 0;
 			}
-
-			/* Oldest page found. */
-			if ((oldest < 0) || (OLDEST(i, oldest)))
-				oldest = i;
 		}
 	}
+	hand=0;
 
-	/* No frame left. */
-	if (oldest < 0)
-		return (-1);
-
-	/* Swap page out. */
-	if (swap_out(curr_proc, frames[i = oldest].addr))
-		return (-1);
-	
+}
 found:
 
-	frames[i].age = 0;
-	frames[i].count = 1;
+	frames[hand].age = ticks;
+	frames[hand].count = 1;
 
-	return (i);
+	return (hand);
 }
 
 /**
