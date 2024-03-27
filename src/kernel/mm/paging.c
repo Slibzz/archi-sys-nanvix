@@ -306,7 +306,6 @@ PRIVATE int allocf(void)
 #define OLDEST(x, y) (frames[x].age < frames[y].age)
 
 /* Search for a free frame. */
-retry:
 	oldest = -1;
 	for (i = 0; i < NR_FRAMES; i++)
 	{
@@ -321,6 +320,18 @@ retry:
 			if (frames[i].count > 1)
 				continue;
 
+			struct pte *pteCurrent;
+			pteCurrent = getpte(curr_proc, frames[i].addr);
+			if (pteCurrent->accessed == 1)
+			{
+				pteCurrent->accessed = 0;
+				frames[i].age = 0;	
+			}
+			else
+			{
+				frames[i].age++;
+			}
+
 			/* Oldest page found. */
 			if ((oldest < 0) || (OLDEST(i, oldest)))
 				oldest = i;
@@ -334,28 +345,10 @@ retry:
 	/* Swap page out. */
 	if (swap_out(curr_proc, frames[i = oldest].addr))
 		return (-1);
-
-	struct pte *pteOldest;
-	pteOldest = getpte(curr_proc, frames[oldest].addr);
-	if (pteOldest->accessed == 1)
-	{
-		pteOldest->accessed = 0;
-		frames[oldest].age = ticks;
-		goto retry;
-	}
-	else
-	{
-		if (pteOldest->dirty == 1)
-		{
-			pteOldest->dirty = 0;
-			swap_out(curr_proc, frames[oldest].addr);
-		}
-		i = oldest;
-	}
 	
 found:
 
-	frames[i].age = ticks;
+	frames[i].age = 0;
 	frames[i].count = 1;
 
 	return (i);
