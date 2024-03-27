@@ -316,7 +316,7 @@ while(1)
 			goto found;
 
 		/* Local page replacement policy. */
-		/*LRU Clock*/
+		/*Clock*/
 		if (frames[i].owner == curr_proc->pid)
 		{
 			/* Skip shared pages. */
