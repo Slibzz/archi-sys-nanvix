@@ -341,7 +341,6 @@ retry:
 	if (pteOldest->accessed == 1)
 	{
 		pteOldest->accessed = 0;
-		frames[oldest].age = ticks;
 	}
 	else
 	{
@@ -350,8 +349,8 @@ retry:
 			pteOldest->dirty = 0;
 			swap_out(curr_proc, frames[oldest].addr);
 		}
-		i = oldest;
 	}
+	i = oldest;
 	
 found:
 
