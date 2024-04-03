@@ -289,6 +289,8 @@ PRIVATE struct
  * @returns Upon success, the number of the frame is returned. Upon failure, a
  *          negative number is returned instead.
  */
+ int tau;
+
 PRIVATE int allocf(void)
 {
 	int i;      /* Loop index.  */
@@ -314,6 +316,8 @@ PRIVATE int allocf(void)
 			/* Oldest page found. */
 			if ((oldest < 0) || (OLDEST(i, oldest)))
 				oldest = i;
+
+			struct pte* curr_pte = getpte()
 		}
 	}
 
