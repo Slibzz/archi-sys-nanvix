@@ -332,10 +332,6 @@ retry:
 	if (oldest < 0)
 		return (-1);
 
-	/* Swap page out. */
-	if (swap_out(curr_proc, frames[i = oldest].addr))
-		return (-1);
-
 	struct pte *pteOldest;
 	pteOldest = getpte(curr_proc, frames[oldest].addr);
 	if (pteOldest->accessed == 1)
@@ -347,10 +343,12 @@ retry:
 		if (pteOldest->dirty == 1)
 		{
 			pteOldest->dirty = 0;
-			swap_out(curr_proc, frames[oldest].addr);
 		}
 	}
-	i = oldest;
+
+		/* Swap page out. */
+	if (swap_out(curr_proc, frames[i = oldest].addr))
+		return (-1);
 	
 found:
 
