@@ -294,56 +294,55 @@ PRIVATE struct
 
 /**
  * @brief Allocates a page frame.
- *
+ * The hand variable is used in the Clock pagination choice algorithm.
+ * It represents the current position of the hand in the clock.
+ * The hand is used to determine which page should be replaced next.
  * @returns Upon success, the number of the frame is returned. Upon failure, a
  *          negative number is returned instead.
  */
-
-int hand =0;
+int hand = 0;
 PRIVATE int allocf(void)
 {
-	int i;		/* Loop index.  */
-	int oldest; /* Oldest page. */
-
 #define OLDEST(x, y) (frames[x].age < frames[y].age)
-while(1)
-{
-	/* Search for a free frame. */
-	for (hand < NR_FRAMES; hand++)
+	while (1)
 	{
-		/* Found it. */
-		if (frames[i].count == 0)
-			goto found;
-
-		/* Local page replacement policy. */
-		/*Clock*/
-		if (frames[i].owner == curr_proc->pid)
+		// Page is free
+		if (frames[hand].count == 0)
 		{
-			/* Skip shared pages. */
-			if (frames[i].count > 1)
-				continue;
-
-			struct pte *pteCurrent;
-			pteCurrent = getpte(curr_proc, frames[i].addr);
-			if (pteCurrent->accessed == 0)
-			{
-				goto found;
-			}
+			frames[hand].count = 1;
+			if (hand == NR_FRAMES)
+				hand = 0;
 			else
+				hand++;
+			return (hand - 1);
+		}
+		// Only use page owned by current proc
+		if (frames[hand].owner == curr_proc->pid)
+		{
+			// skip shared pages
+			if (frames[hand].count <= 1)
 			{
-				pteCurrent->accessed = 0;
+				struct pte *curr_pte = getpte(curr_proc, frames[hand].addr);
+				if (curr_pte->accessed == 1)
+				{
+					curr_pte->accessed = 0;
+				}
+				else
+				{
+					if (hand == NR_FRAMES)
+						hand = 0;
+					else
+						hand++;
+					if (swap_out(curr_proc, frames[hand - 1].addr))
+						return (-1);
+				}
 			}
 		}
+		if (hand == NR_FRAMES)
+			hand = 0;
+		else
+			hand++;
 	}
-	hand=0;
-
-}
-found:
-
-	frames[hand].age = ticks;
-	frames[hand].count = 1;
-
-	return (hand);
 }
 
 /**
