@@ -322,21 +322,18 @@ retry:
 				continue;
 
 			/* Oldest page found. */
-			// check for older page non accessed 
+			// check for older page non accessed
 			if ((oldest < 0) || (OLDEST(i, oldest)))
 				oldest = i;
 		}
 	}
-
-	/* No frame left. */
-	if (oldest < 0)
-		return (-1);
 
 	struct pte *pteOldest;
 	pteOldest = getpte(curr_proc, frames[oldest].addr);
 	if (pteOldest->accessed == 1)
 	{
 		pteOldest->accessed = 0;
+		frames[oldest].age = ticks;
 	}
 	else
 	{
@@ -346,10 +343,14 @@ retry:
 		}
 	}
 
-		/* Swap page out. */
+	/* No frame left. */
+	if (oldest < 0)
+		return (-1);
+
+	/* Swap page out. */
 	if (swap_out(curr_proc, frames[i = oldest].addr))
 		return (-1);
-	
+
 found:
 
 	frames[i].age = ticks;
