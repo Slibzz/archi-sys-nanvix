@@ -334,6 +334,7 @@ retry:
 	{
 		pteOldest->accessed = 0;
 		frames[oldest].age = ticks;
+		goto retry;
 	}
 	else
 	{
